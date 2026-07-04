@@ -201,6 +201,7 @@ export const apiStub = {
       
       let structuredSummary = {};
       let hospital = "Unknown Clinic";
+      let doctor = "Unknown Doctor";
       let date = new Date().toISOString().split('T')[0];
       
       if (aiData.event) {
@@ -210,6 +211,7 @@ export const apiStub = {
           recommendations: aiData.context?.suggested_next_visit || "None"
         };
         hospital = aiData.event.hospital_or_clinic || hospital;
+        doctor = aiData.event.doctor_name || doctor;
         if (aiData.event.date) date = aiData.event.date;
       } else {
         structuredSummary = {
@@ -218,6 +220,7 @@ export const apiStub = {
           recommendations: "None"
         };
         hospital = aiData.hospital_or_clinic || hospital;
+        doctor = aiData.doctor_name || doctor;
         if (aiData.date) date = aiData.date;
       }
 
@@ -226,7 +229,7 @@ export const apiStub = {
         health_id: CITIZEN_ID,
         hospital: hospital,
         date: date,
-        doctor: doctor || "Extracted Doctor",
+        doctor: doctor,
         record_type: category || "Document",
         structured_summary: structuredSummary,
         ai_data: aiData // Pass the full structured AI response

@@ -148,10 +148,10 @@ def add_consultation():
     return jsonify({'message': 'Consultation saved successfully', 'consultation_id': consultation.id}), 201
 
 @app.route('/api/citizens/<health_id>/records/upload', methods=['POST'])
-def upload_medical_record():
+def upload_medical_record(health_id):
     data = request.json
-    health_id = data.get('health_id')
-    citizen = get_citizen_by_health_id(health_id)
+    cid = data.get('health_id') or health_id
+    citizen = get_citizen_by_health_id(cid)
     if not citizen:
         return jsonify({'error': 'Citizen not found'}), 404
         
