@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Sparkles, AlertCircle, Copy, Check } from 'lucide-react';
+import { Shield, Sparkles, AlertCircle, Copy, Check, Download } from 'lucide-react';
 
 export default function QRHealthCard({ profile, language }) {
   const [copied, setCopied] = React.useState(false);
@@ -9,6 +9,26 @@ export default function QRHealthCard({ profile, language }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const backendBase = window.location.origin.includes(':5173')
+    ? 'http://127.0.0.1:5000'
+    : window.location.origin;
+
+  const handleOpenCard = () => {
+    window.open(`${backendBase}/patient/${profile.id}`, '_blank');
+  };
+
+  // Build QR data: URL (primary) + text fallback (works offline in any scanner)
+  const allergiesText = profile.allergies && profile.allergies.length > 0 ? profile.allergies.join(', ') : 'None';
+  const qrData = [
+    `${backendBase}/patient/${profile.id}`,
+    `---`,
+    `NAME: ${profile.name}`,
+    `AGE/SEX: ${profile.age}yr / ${profile.gender}`,
+    `BLOOD: ${profile.bloodGroup}`,
+    `ALLERGIES: ${allergiesText}`,
+    `EMERGENCY: ${profile.emergencyContact}`,
+  ].join('\n');
 
   const t = {
     title: language === 'en' ? 'National Digital Health Card (Sample)' : 'राष्ट्रीय डिजिटल स्वास्थ्य कार्ड (नमूना)',
@@ -77,7 +97,7 @@ export default function QRHealthCard({ profile, language }) {
             justifyContent: 'center',
             boxShadow: 'var(--shadow-md)'
           }}>
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=medflow-patient-${profile.id}`} alt="ABHA QR Code" style={{ width: '130px', height: '130px' }} />
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrData)}&ecc=H`} alt="ABHA QR Code" style={{ width: '130px', height: '130px' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }} className={language === 'hi' ? 'hindi-text' : ''}>
@@ -121,7 +141,7 @@ export default function QRHealthCard({ profile, language }) {
         </div>
       </div>
 
-      {/* Info Card */}
+      {/* Offline Info Card */}
       <div className="dashboard-card" style={{ backgroundColor: 'var(--warning-light)', borderColor: 'var(--warning)' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
           <AlertCircle size={20} color="var(--warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -135,6 +155,33 @@ export default function QRHealthCard({ profile, language }) {
           </div>
         </div>
       </div>
+
+      {/* Download / Save PDF Button */}
+      <button
+        onClick={handleOpenCard}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '10px',
+          padding: '14px',
+          background: 'linear-gradient(135deg, #0b2240 0%, #1e3a5f 100%)',
+          color: 'white',
+          fontWeight: 700,
+          fontSize: '1rem',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          marginTop: '8px',
+          boxShadow: '0 4px 12px rgba(11,34,64,0.2)'
+        }}
+      >
+        <Download size={18} />
+        <span className={language === 'hi' ? 'hindi-text' : ''}>
+          {language === 'en' ? 'Open Patient Card & Save as PDF' : 'पेशेंट कार्ड खोलें और PDF सेव करें'}
+        </span>
+      </button>
     </div>
   );
 }

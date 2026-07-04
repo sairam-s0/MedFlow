@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
-import ApiLogger from './components/ApiLogger';
 
 // Pages
 import CitizenHome from './pages/CitizenHome';
@@ -140,7 +139,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Top ABDM Emblem Header */}
+      {/* Bottom ABDM Emblem Header */}
       <Header 
         currentPage={currentPage} 
         setCurrentPage={setCurrentPage} 
@@ -149,13 +148,10 @@ export default function App() {
         setLanguage={setLanguage}
       />
 
-      {/* Main Working Panel */}
+      {/* Main Panel */}
       <main className="main-content">
         {renderPageContent()}
       </main>
-
-      {/* Developers REST Logger console */}
-      <ApiLogger />
     </div>
   );
 }
