@@ -70,30 +70,41 @@ def _call_llm(base64_image: str, mime_type: str, prompt: str) -> str:
 
     if config.PROVIDER == "gemini":
         try:
-            import google.generativeai as genai
-            from google.generativeai import types
+            from google import genai
+            from google.genai import types
         except ImportError:
             raise ImportError(
-                "google-generativeai SDK is not installed. Run: pip install google-generativeai"
+                "google-genai SDK is not installed. Run: pip install google-genai"
             )
 
-        genai.configure(api_key=config.API_KEY)
-        model = genai.GenerativeModel(config.MODEL_NAME)
-        
-        # Convert base64 string to image bytes for Gemini
-        image_bytes = base64.b64decode(base64_image)
-        image_part = {
-            "mime_type": mime_type,
-            "data": image_bytes
-        }
-
-        response = model.generate_content(
-            [image_part, prompt],
-            generation_config=types.GenerationConfig(
-                response_mime_type="application/json"
-            )
+        masked_key = (
+            f"{config.API_KEY[:2]}...{config.API_KEY[-2:]}" 
+            if config.API_KEY and len(config.API_KEY) > 4 else "Short/Empty Key"
         )
-        return response.text
+
+        try:
+            # Explicitly initialize the client using the API key
+            client = genai.Client(api_key=config.API_KEY)
+            
+            # Convert base64 string to image bytes for Gemini
+            image_bytes = base64.b64decode(base64_image)
+            image_part = types.Part.from_bytes(
+                data=image_bytes,
+                mime_type=mime_type
+            )
+
+            response = client.models.generate_content(
+                model=config.MODEL_NAME,
+                contents=[image_part, prompt],
+                config={
+                    'response_mime_type': 'application/json'
+                }
+            )
+            return response.text
+        except Exception as e:
+            print(f"[-] Gemini Vision call failed! API_KEY (masked): {masked_key}")
+            print(f"[-] Exception details: {e}")
+            raise e
 
     elif config.PROVIDER == "groq":
         try:
@@ -180,23 +191,33 @@ def call_text_llm(prompt: str) -> str:
 
     if config.PROVIDER == "gemini":
         try:
-            import google.generativeai as genai
-            from google.generativeai import types
+            from google import genai
         except ImportError:
             raise ImportError(
-                "google-generativeai SDK is not installed. Run: pip install google-generativeai"
+                "google-genai SDK is not installed. Run: pip install google-genai"
             )
 
-        genai.configure(api_key=config.API_KEY)
-        model = genai.GenerativeModel(config.MODEL_NAME)
-        
-        response = model.generate_content(
-            prompt,
-            generation_config=types.GenerationConfig(
-                response_mime_type="application/json"
-            )
+        masked_key = (
+            f"{config.API_KEY[:2]}...{config.API_KEY[-2:]}" 
+            if config.API_KEY and len(config.API_KEY) > 4 else "Short/Empty Key"
         )
-        return response.text
+
+        try:
+            # Explicitly initialize the client using the API key
+            client = genai.Client(api_key=config.API_KEY)
+            
+            response = client.models.generate_content(
+                model=config.MODEL_NAME,
+                contents=prompt,
+                config={
+                    'response_mime_type': 'application/json'
+                }
+            )
+            return response.text
+        except Exception as e:
+            print(f"[-] Gemini Text call failed! API_KEY (masked): {masked_key}")
+            print(f"[-] Exception details: {e}")
+            raise e
 
     elif config.PROVIDER == "groq":
         try:

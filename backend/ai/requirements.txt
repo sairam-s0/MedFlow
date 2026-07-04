@@ -1,6 +1,5 @@
 flask
 flask-cors
 requests
-pymupdf
-google-generativeai
-# groq
+google-genai
+groq

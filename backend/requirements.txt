@@ -2,5 +2,5 @@ Flask
 Flask-SQLAlchemy
 Flask-CORS
 requests
-pymupdf
-google-generativeai
+google-genai
+groq
