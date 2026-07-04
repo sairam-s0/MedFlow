@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import json
 
 db = SQLAlchemy()
 
@@ -13,6 +14,13 @@ class Citizen(db.Model):
     contact = db.Column(db.String(20), nullable=True)
     emergency_contact = db.Column(db.String(100), nullable=False)
     last_hospital_visit = db.Column(db.String(50), nullable=True)
+    
+    # New CDS fields
+    health_score = db.Column(db.Integer, nullable=True)
+    overall_stability = db.Column(db.String(50), nullable=True)
+    family_history = db.Column(db.Text, nullable=True)
+    lifestyle_notes = db.Column(db.Text, nullable=True)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     conditions = db.relationship('Condition', backref='citizen', lazy=True)
@@ -21,6 +29,9 @@ class Citizen(db.Model):
     records = db.relationship('MedicalRecord', backref='citizen', lazy=True)
     timeline_events = db.relationship('TimelineEvent', backref='citizen', lazy=True)
     consultations = db.relationship('Consultation', backref='citizen', lazy=True)
+    lab_results = db.relationship('LabResult', backref='citizen', lazy=True)
+    risk_indicators = db.relationship('RiskIndicator', backref='citizen', lazy=True)
+    follow_ups = db.relationship('FollowUp', backref='citizen', lazy=True)
 
     def to_dict(self):
         return {
@@ -33,6 +44,10 @@ class Citizen(db.Model):
             'contact': self.contact,
             'emergency_contact': self.emergency_contact,
             'last_hospital_visit': self.last_hospital_visit,
+            'health_score': self.health_score,
+            'overall_stability': self.overall_stability,
+            'family_history': self.family_history,
+            'lifestyle_notes': self.lifestyle_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'conditions': [c.to_dict() for c in self.conditions],
             'medications': [m.to_dict() for m in self.medications],
@@ -44,7 +59,7 @@ class Condition(db.Model):
     citizen_id = db.Column(db.Integer, db.ForeignKey('citizen.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     diagnosed_year = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(20), nullable=False) # e.g. "Active", "Resolved"
+    status = db.Column(db.String(20), nullable=False) 
 
     def to_dict(self):
         return {
@@ -88,14 +103,13 @@ class MedicalRecord(db.Model):
     hospital = db.Column(db.String(100), nullable=False)
     date = db.Column(db.String(50), nullable=False)
     doctor = db.Column(db.String(100), nullable=False)
-    record_type = db.Column(db.String(50), nullable=False) # e.g. "Lab Report"
+    record_type = db.Column(db.String(50), nullable=False) 
     verified = db.Column(db.Boolean, default=False)
     open_access = db.Column(db.Boolean, default=True)
-    file_path = db.Column(db.String(255), nullable=True) # mock path
-    structured_summary = db.Column(db.Text, nullable=True) # JSON string representation
+    file_path = db.Column(db.String(255), nullable=True) 
+    structured_summary = db.Column(db.Text, nullable=True) 
 
     def to_dict(self):
-        import json
         return {
             'id': self.id,
             'hospital': self.hospital,
@@ -114,7 +128,7 @@ class TimelineEvent(db.Model):
     year = db.Column(db.String(4), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    event_type = db.Column(db.String(50), nullable=False) # Diagnosis, Medication, Upload, Consultation
+    event_type = db.Column(db.String(50), nullable=False) 
 
     def to_dict(self):
         return {
@@ -142,4 +156,57 @@ class Consultation(db.Model):
             'diagnosis': self.diagnosis,
             'prescription': self.prescription,
             'notes': self.notes
+        }
+
+# --- NEW CDS MODELS ---
+
+class LabResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    citizen_id = db.Column(db.Integer, db.ForeignKey('citizen.id'), nullable=False)
+    test_name = db.Column(db.String(100), nullable=False)
+    value = db.Column(db.String(50), nullable=False)
+    unit = db.Column(db.String(50), nullable=False)
+    date = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(50), nullable=False) # e.g. Above Normal, Normal, Low
+    trend = db.Column(db.String(50), nullable=False)  # e.g. Stable, Improving, Increasing
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'test_name': self.test_name,
+            'value': self.value,
+            'unit': self.unit,
+            'date': self.date,
+            'status': self.status,
+            'trend': self.trend
+        }
+
+class RiskIndicator(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    citizen_id = db.Column(db.Integer, db.ForeignKey('citizen.id'), nullable=False)
+    indicator = db.Column(db.String(255), nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'indicator': self.indicator,
+            'notes': self.notes
+        }
+
+class FollowUp(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    citizen_id = db.Column(db.Integer, db.ForeignKey('citizen.id'), nullable=False)
+    type = db.Column(db.String(100), nullable=False) # e.g. Lab Test, Consultation, Vaccination
+    description = db.Column(db.Text, nullable=False)
+    due_date = db.Column(db.String(50), nullable=True)
+    status = db.Column(db.String(50), nullable=False) # Upcoming, Missed, Pending
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'description': self.description,
+            'due_date': self.due_date,
+            'status': self.status
         }
