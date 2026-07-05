@@ -181,6 +181,103 @@ def extract_medical_data(base64_image: str, mime_type: str) -> dict:
                 "extraction_confidence": "low"
             }
 
+TEXT_EXTRACTION_PROMPT = """You are an expert medical document parser.
+
+You are given the full OCR text from a medical document, along with partial extraction results from a regex parser.
+
+Your job is to:
+1. Extract any DIAGNOSIS or CONDITIONS mentioned in the text (the regex parser cannot do this).
+2. Find any MEDICATIONS the regex parser missed.
+3. Identify ALLERGIES mentioned in the text.
+4. Provide a brief clinical NOTES summary.
+5. Confirm or correct the document_type, date, hospital, and doctor fields.
+
+IMPORTANT:
+- Base your extraction ONLY on the provided text. Never invent data.
+- For fields the regex parser already found correctly, you can confirm or improve them.
+- Focus especially on diagnosis, clinical notes, and natural language content.
+
+Return a JSON object with this schema:
+{
+  "document_type": "lab_report | prescription | discharge_summary | vaccination | radiology | operation | unknown",
+  "date": "YYYY-MM-DD or null",
+  "hospital_or_clinic": "string or null",
+  "doctor_name": "string or null",
+  "diagnosis": ["list of conditions/diagnoses"],
+  "medications": [{"name": "string", "dosage": "string", "frequency": "string"}],
+  "lab_results": [{"test_name": "string", "value": "string", "unit": "string", "reference_range": "string", "flag": "normal/high/low or null"}],
+  "allergies": ["list"],
+  "notes": "clinical summary string or null",
+  "raw_text": "",
+  "extraction_confidence": "high | medium | low"
+}
+
+Return ONLY valid JSON. No markdown code blocks.
+"""
+
+
+def extract_from_text(raw_text: str, partial_extraction: dict = None, unresolved_text: str = "") -> dict:
+    """
+    Text-based extraction: sends OCR'd text to LLM for structured extraction.
+    Much cheaper than vision calls — uses text-only prompt.
+    
+    Args:
+        raw_text: Full OCR text from the document
+        partial_extraction: Results from regex/dictionary parsing (optional)
+        unresolved_text: Text segments that regex couldn't parse
+    
+    Returns:
+        Extracted medical data dict
+    """
+    # Build a focused prompt with context from regex parsing
+    prompt_parts = [TEXT_EXTRACTION_PROMPT]
+    
+    prompt_parts.append("\n--- FULL DOCUMENT TEXT (from OCR) ---")
+    prompt_parts.append(raw_text[:8000])  # Limit text length to control token usage
+    
+    if partial_extraction:
+        import json as _json
+        # Include what regex already found so the LLM can focus on gaps
+        regex_summary = {
+            "document_type": partial_extraction.get("document_type", "unknown"),
+            "date": partial_extraction.get("date"),
+            "hospital_or_clinic": partial_extraction.get("hospital_or_clinic"),
+            "doctor_name": partial_extraction.get("doctor_name"),
+            "lab_results_count": len(partial_extraction.get("lab_results", [])),
+            "medications_count": len(partial_extraction.get("medications", [])),
+        }
+        prompt_parts.append("\n--- REGEX PARSER ALREADY FOUND ---")
+        prompt_parts.append(_json.dumps(regex_summary, indent=2))
+        prompt_parts.append("Focus on filling in: diagnosis, allergies, notes, and any missed medications.")
+    
+    if unresolved_text:
+        prompt_parts.append("\n--- UNRESOLVED TEXT (needs your analysis) ---")
+        prompt_parts.append(unresolved_text[:3000])
+    
+    full_prompt = "\n".join(prompt_parts)
+    
+    response_text = ""
+    try:
+        response_text = call_text_llm(full_prompt)
+        cleaned = clean_json_string(response_text)
+        return json.loads(cleaned)
+    except Exception as e:
+        print(f"[-] Text extraction failed: {e}. Returning empty result.")
+        return {
+            "document_type": "unknown",
+            "date": None,
+            "hospital_or_clinic": None,
+            "doctor_name": None,
+            "diagnosis": [],
+            "medications": [],
+            "lab_results": [],
+            "allergies": [],
+            "notes": f"LLM text extraction failed: {e}",
+            "raw_text": raw_text,
+            "extraction_confidence": "low"
+        }
+
+
 def call_text_llm(prompt: str) -> str:
     """Interacts with the selected LLM provider using the credentials from config.py for text-only completion."""
     if not config.API_KEY or "PASTE_YOUR_" in config.API_KEY:

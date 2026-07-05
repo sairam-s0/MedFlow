@@ -25,7 +25,11 @@ def build_patient_context(previous_events: list[dict], new_event: dict) -> dict:
     """
     Takes a patient's historical medical events (list of schema dicts) and a newly
     extracted event, sorts them chronologically, deduplicates condition/medication strings,
-    and runs a single LLM call to build a summary, trends, and follow-up recommendations.
+    and builds a summary + trends + follow-up recommendations.
+    
+    OPTIMIZED: Uses rule-based logic by default (no LLM cost).
+    Only calls LLM for complex histories (>5 events) where trends are harder
+    to detect with simple rules.
     
     Returns:
         {
@@ -39,7 +43,6 @@ def build_patient_context(previous_events: list[dict], new_event: dict) -> dict:
         }
     """
     # 1. Chronological Sorting (earliest to latest)
-    # Default null or missing dates to "0000-00-00" to sort them at the beginning
     all_events = previous_events + [new_event]
     sorted_events = sorted(
         all_events,
@@ -51,16 +54,121 @@ def build_patient_context(previous_events: list[dict], new_event: dict) -> dict:
     canonical_medications = []
 
     for ev in sorted_events:
-        # Deduplicate diagnoses
         for d in ev.get("diagnosis", []):
             if d:
                 get_canonical_name(d, canonical_diagnoses)
-        # Deduplicate medications
         for m in ev.get("medications", []):
             if isinstance(m, dict) and m.get("name"):
                 get_canonical_name(m["name"], canonical_medications)
 
-    # Format history and new event compactly for LLM prompt to reduce token count
+    # 3. Find recurring conditions (appear in >1 event)
+    from collections import Counter
+    condition_counts = Counter()
+    for ev in sorted_events:
+        seen_in_event = set()
+        for d in ev.get("diagnosis", []):
+            if d:
+                canonical = get_canonical_name(d, [])
+                seen_in_event.add(canonical)
+        for s in seen_in_event:
+            condition_counts[s] += 1
+    recurring_conditions = [k for k, v in condition_counts.items() if v > 1]
+
+    # 4. Rule-based timeline summary
+    num_events = len(sorted_events)
+    date_range = ""
+    first_date = sorted_events[0].get("date") if sorted_events else None
+    last_date = sorted_events[-1].get("date") if sorted_events else None
+    if first_date and last_date and first_date != last_date:
+        date_range = f" from {first_date} to {last_date}"
+    elif first_date:
+        date_range = f" on {first_date}"
+
+    doc_types = [ev.get("document_type", "unknown") for ev in sorted_events if ev.get("document_type")]
+    new_doc_type = new_event.get("document_type", "medical record").replace("_", " ")
+
+    timeline_summary = (
+        f"Patient has {num_events} medical event(s) on record{date_range}. "
+        f"Latest event: {new_doc_type}."
+    )
+    if recurring_conditions:
+        timeline_summary += f" Recurring condition(s): {', '.join(recurring_conditions)}."
+
+    # 5. Rule-based trend flagging
+    flagged_trend = None
+    if recurring_conditions:
+        flagged_trend = f"Recurring: {', '.join(recurring_conditions[:3])}"
+    
+    # Check for lab trends (same test across events)
+    lab_trends = _detect_lab_trends(sorted_events)
+    if lab_trends:
+        flagged_trend = (flagged_trend + "; " if flagged_trend else "") + lab_trends
+
+    # 6. Rule-based follow-up suggestion
+    suggested_next_visit = None
+    if recurring_conditions:
+        suggested_next_visit = f"Consider follow-up review for {recurring_conditions[0]} management."
+    
+    context_obj = {
+        "timeline_summary": timeline_summary,
+        "flagged_trend": flagged_trend,
+        "suggested_next_visit": suggested_next_visit,
+        "recurring_conditions": recurring_conditions
+    }
+
+    # 7. For complex histories (>5 events), optionally enhance with LLM
+    if len(previous_events) > 5:
+        print("    -> Complex history detected (>5 events). Attempting LLM-enhanced context...")
+        try:
+            llm_context = _build_llm_context(previous_events, new_event, 
+                                              canonical_medications, canonical_diagnoses)
+            if llm_context:
+                # Merge LLM insights with rule-based results
+                if llm_context.get("timeline_summary"):
+                    context_obj["timeline_summary"] = llm_context["timeline_summary"]
+                if llm_context.get("flagged_trend"):
+                    context_obj["flagged_trend"] = llm_context["flagged_trend"]
+                if llm_context.get("suggested_next_visit"):
+                    context_obj["suggested_next_visit"] = llm_context["suggested_next_visit"]
+                # Keep rule-based recurring_conditions (more reliable)
+        except Exception as e:
+            print(f"    -> LLM context enhancement failed: {e}. Using rule-based results.")
+
+    return {
+        "event": new_event,
+        "context": context_obj
+    }
+
+
+def _detect_lab_trends(sorted_events: list[dict]) -> str | None:
+    """Detect simple lab value trends across events."""
+    # Collect lab values by test name across events
+    lab_history = {}
+    for ev in sorted_events:
+        for lab in ev.get("lab_results", []):
+            if isinstance(lab, dict) and lab.get("test_name") and lab.get("value"):
+                test = lab["test_name"].lower()
+                try:
+                    val = float(lab["value"])
+                    if test not in lab_history:
+                        lab_history[test] = []
+                    lab_history[test].append(val)
+                except ValueError:
+                    continue
+    
+    trends = []
+    for test, values in lab_history.items():
+        if len(values) >= 2:
+            if all(values[i] < values[i+1] for i in range(len(values)-1)):
+                trends.append(f"{test} increasing")
+            elif all(values[i] > values[i+1] for i in range(len(values)-1)):
+                trends.append(f"{test} decreasing")
+    
+    return "; ".join(trends[:3]) if trends else None
+
+
+def _build_llm_context(previous_events, new_event, canonical_medications, canonical_diagnoses):
+    """LLM-enhanced context for complex histories. Only called for >5 events."""
     history_formatted = []
     for ev in previous_events:
         history_formatted.append({
@@ -91,7 +199,6 @@ def build_patient_context(previous_events: list[dict], new_event: dict) -> dict:
         ]
     }
 
-    # 3. Construct Context-Generation Prompt
     prompt = f"""You are an expert clinical timeline and trend analysis tool.
 You are given a chronological history of a patient's medical events, followed by a new medical event that has just been added.
 
@@ -101,73 +208,19 @@ You are given a chronological history of a patient's medical events, followed by
 --- NEW MEDICAL EVENT ---
 {json.dumps(new_event_formatted, indent=2)}
 
---- DEDUPLICATED HISTORICAL LIST OF MEDICATIONS FOR REFERENCE ---
-{json.dumps(canonical_medications, indent=2)}
+Analyze this patient's medical history and output a JSON object with:
+1. "timeline_summary": 1-3 sentence summary of health progression.
+2. "flagged_trend": A trend string or null.
+3. "suggested_next_visit": Follow-up suggestion or null.
+4. "recurring_conditions": List of recurring conditions.
 
---- DEDUPLICATED HISTORICAL LIST OF DIAGNOSES FOR REFERENCE ---
-{json.dumps(canonical_diagnoses, indent=2)}
-
-Analyze this patient's medical history and the new event, and output a JSON object containing these exact keys:
-1. "timeline_summary": A 1-3 sentence plain-language summary of how the patient's health has progressed over time, integrating the new event into the context of their history.
-2. "flagged_trend": A short trend string if something stands out across visits (e.g. 'HbA1c levels improving over last 3 visits' or 'recurring high blood pressure'), or null if no trend stands out.
-3. "suggested_next_visit": A rough suggestion string for a follow-up visit (e.g., 'Follow-up in 3 months for diabetes review') or null if not medically indicated. This must be framed non-diagnostically and non-prescriptively (e.g., use words like 'may warrant follow-up', 'consider checking', 'recommended review').
-4. "recurring_conditions": A list of conditions/diagnoses that appear more than once across history (including the new event). Use clean, canonical names from the reference list if applicable.
-
-Strict Rules:
-- Base suggestions and summaries ONLY on the provided history and events.
-- Never invent any unrelated medical advice, prescriptions, or diagnoses.
-- Return ONLY valid JSON matching this format. Do not wrap in markdown code blocks like ```json ... ```.
+Return ONLY valid JSON. No markdown code blocks.
 """
 
-    context_obj = {
-        "timeline_summary": "Timeline summary could not be generated.",
-        "flagged_trend": None,
-        "suggested_next_visit": None,
-        "recurring_conditions": []
-    }
-
-    # 4. LLM Call with Retry
     try:
         response_text = extractor.call_text_llm(prompt)
         cleaned = extractor.clean_json_string(response_text)
-        context_obj = json.loads(cleaned)
-    except Exception as e:
-        print(f"[-] Context generation attempt 1 failed: {e}. Retrying with stricter instructions...")
-        try:
-            retry_prompt = (
-                prompt + 
-                "\n\nCRITICAL: Your previous response failed to parse as valid JSON. "
-                "You MUST output raw valid JSON ONLY. Do NOT use markdown code blocks (```json). "
-                "Ensure all fields are present: timeline_summary, flagged_trend, suggested_next_visit, recurring_conditions."
-            )
-            response_text = extractor.call_text_llm(retry_prompt)
-            cleaned = extractor.clean_json_string(response_text)
-            context_obj = json.loads(cleaned)
-        except Exception as e2:
-            print(f"[-] Context generation retry failed: {e2}. Returning safe defaults.")
-            # We can also populate recurring_conditions using difflib locally as a fallback
-            local_recurring = []
-            from collections import Counter
-            counts = Counter()
-            for ev in sorted_events:
-                # Add unique diagnoses per event
-                seen_in_event = set()
-                for d in ev.get("diagnosis", []):
-                    if d:
-                        seen_in_event.add(get_canonical_name(d, []))
-                for s in seen_in_event:
-                    counts[s] += 1
-            local_recurring = [k for k, v in counts.items() if v > 1]
-            context_obj["recurring_conditions"] = local_recurring
-            context_obj["timeline_summary"] = "Failed to generate AI timeline summary due to LLM parsing error."
+        return json.loads(cleaned)
+    except Exception:
+        return None
 
-    # Return combined dictionary: new event + context summary
-    return {
-        "event": new_event,
-        "context": {
-            "timeline_summary": str(context_obj.get("timeline_summary", "")).strip(),
-            "flagged_trend": context_obj.get("flagged_trend"),
-            "suggested_next_visit": context_obj.get("suggested_next_visit"),
-            "recurring_conditions": list(context_obj.get("recurring_conditions", []))
-        }
-    }
