@@ -12,7 +12,6 @@ pipeline can gracefully fall back to the vision LLM path.
 
 import os
 import io
-import numpy as np
 
 # Lazy-loaded EasyOCR reader instance (initialized on first use)
 _ocr_reader = None
@@ -66,6 +65,7 @@ def ocr_image_bytes(image_bytes: bytes) -> dict | None:
 
     try:
         from PIL import Image
+        import numpy as np
         # Convert bytes to numpy array for EasyOCR
         img = Image.open(io.BytesIO(image_bytes))
         # Convert to RGB if needed (EasyOCR expects RGB)

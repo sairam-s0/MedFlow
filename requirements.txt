@@ -4,5 +4,3 @@ Flask-CORS
 requests
 google-genai
 groq
-easyocr
-Pillow

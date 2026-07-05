@@ -1,0 +1,43 @@
+# Vercel Ignore File
+# Prevents uploading local virtual environments and other development/testing assets
+
+# Virtual Environments
+venv/
+.venv/
+env/
+*env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Testing and Logs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+logs/
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Databases (Local SQLite)
+*.db
+backend/medflow.db
+medflow.db
+
+# Documentation / Scratch scripts
+walkthrough.md
+implementation_plan.md
+task.md
