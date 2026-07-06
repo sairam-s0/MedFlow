@@ -1,33 +1,63 @@
 import os
 
 # =====================================================================
-# CONFIGURATION - HACKATHON INGESTION PIPELINE
+# CONFIGURATION - AI INGESTION PIPELINE
 # =====================================================================
 
-# API Provider: "gemini" or "groq"
-PROVIDER = "gemini"
+def _load_local_env_file(path: str) -> None:
+    """Load simple KEY=VALUE pairs for local Windows startup without extra deps."""
+    if not os.path.exists(path):
+        return
 
-# Model Selection:
-# - For Gemini: e.g. "gemini-2.0-flash", "gemini-2.5-flash"
-# - For Groq: e.g. "llama-3.2-90b-vision-preview", "llama-3.2-11b-vision-preview"
-MODEL_NAME = "gemini-2.0-flash" if PROVIDER == "gemini" else "llama-3.2-90b-vision-preview"
+    with open(path, "r", encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            os.environ.setdefault(key, value)
 
-# API Keys:
-# Read from system environment variables or fall back to hardcoded strings for convenience.
+
+_CONFIG_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.dirname(_CONFIG_DIR)
+_PROJECT_DIR = os.path.dirname(_BACKEND_DIR)
+_load_local_env_file(os.path.join(_PROJECT_DIR, ".env"))
+_load_local_env_file(os.path.join(_BACKEND_DIR, ".env"))
+
+SUPPORTED_PROVIDERS = {"gemini", "groq"}
+
+# Set AI_PROVIDER=groq or AI_PROVIDER=gemini in Vercel/local env.
+# Default to Groq for this project; Gemini is available when explicitly selected.
+PROVIDER = os.environ.get("AI_PROVIDER", "groq").strip().lower()
+if PROVIDER not in SUPPORTED_PROVIDERS:
+    raise ValueError(
+        f"Unsupported AI_PROVIDER '{PROVIDER}'. Expected one of: "
+        f"{', '.join(sorted(SUPPORTED_PROVIDERS))}."
+    )
+
+DEFAULT_MODELS = {
+    "gemini": "gemini-2.0-flash",
+    "groq": "meta-llama/llama-4-scout-17b-16e-instruct",
+}
+
+MODEL_ENV_VARS = {
+    "gemini": "GEMINI_MODEL",
+    "groq": "GROQ_MODEL",
+}
+
+MODEL_NAME = os.environ.get(MODEL_ENV_VARS[PROVIDER], DEFAULT_MODELS[PROVIDER])
+
 if PROVIDER == "gemini":
-    # Check both GOOGLE_API_KEY (classic) and GEMINI_API_KEY (new SDK standard)
     API_KEY = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    if not API_KEY:
-        # Paste your Gemini API key inside the quotes if you wish to hardcode it:
-        API_KEY = "AIzaSyBhKJOkcvJq6QHBy2Bd-5RC6vsowS2nBjk"
+    KEY_ENV_NAME = "GOOGLE_API_KEY/GEMINI_API_KEY"
 else:
-    # Paste your Groq API key inside the quotes if you wish to hardcode it:
-    API_KEY = os.environ.get("GROQ_API_KEY", "PASTE_YOUR_GROQ_KEY_HERE")
+    API_KEY = os.environ.get("GROQ_API_KEY")
+    KEY_ENV_NAME = "GROQ_API_KEY"
 
-# TEMPORARY DEBUGGING PRINT (masking the key for safety)
-if PROVIDER == "gemini":
-    _key_source = "Environment Variable" if (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")) else "Fallback Hardcoded String"
-else:
-    _key_source = "Environment Variable" if os.environ.get("GROQ_API_KEY") else "Fallback Hardcoded String"
-_masked = f"{API_KEY[:4]}...{API_KEY[-4:]}" if API_KEY and len(API_KEY) > 8 else "None or Empty"
-print(f"[DEBUG] config.py: Provider={PROVIDER}, Model={MODEL_NAME}, API_KEY from {_key_source}. Masked: {_masked}")
+_masked = f"{API_KEY[:4]}...{API_KEY[-4:]}" if API_KEY and len(API_KEY) > 8 else "not set"
+print(
+    f"[AI config] Provider={PROVIDER}, Model={MODEL_NAME}, "
+    f"{KEY_ENV_NAME}={_masked}"
+)

@@ -4,3 +4,4 @@ Flask-CORS
 requests
 google-genai
 groq
+PyMuPDF

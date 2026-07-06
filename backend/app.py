@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from models import db, Citizen, Condition, Medication, Allergy, MedicalRecord, TimelineEvent, Consultation, LabResult, RiskIndicator, FollowUp
 from datetime import datetime
+from collections import Counter
 import os
 app = Flask(__name__)
 CORS(app)
@@ -155,13 +156,34 @@ def upload_medical_record(health_id):
     if not citizen:
         return jsonify({'error': 'Citizen not found'}), 404
         
-    ai_data = data.get('ai_data') or {}
+    raw_ai_data = data.get('ai_data') or {}
+    ai_data = raw_ai_data.get('event') if isinstance(raw_ai_data, dict) and raw_ai_data.get('event') else raw_ai_data
+    notes = ai_data.get('notes') or ''
+
+    has_extracted_content = any([
+        ai_data.get('document_type') and ai_data.get('document_type') != 'unknown',
+        ai_data.get('hospital_or_clinic'),
+        ai_data.get('doctor_name'),
+        ai_data.get('diagnosis'),
+        ai_data.get('medications'),
+        ai_data.get('lab_results'),
+        ai_data.get('allergies'),
+    ])
+    extraction_failed = (
+        ai_data.get('extraction_confidence') == 'low'
+        and not has_extracted_content
+        and ('LLM parsing failed' in notes or 'LLM text extraction failed' in notes)
+    )
+    if extraction_failed:
+        return jsonify({
+            'error': 'AI extraction failed',
+            'message': notes[:300] or 'The document could not be parsed. No record was saved.'
+        }), 422
     
     hospital = ai_data.get('hospital_or_clinic') or data.get('hospital') or 'Unknown Hospital'
     date = ai_data.get('date') or data.get('date') or datetime.now().strftime('%Y-%m-%d')
     doctor = ai_data.get('doctor_name') or data.get('doctor') or 'Unknown Doctor'
     record_type = ai_data.get('document_type') or data.get('record_type') or 'Uploaded Report'
-    notes = ai_data.get('notes') or ''
     
     # Generate structured summary dictionary
     structured_summary = data.get('structured_summary') or {}
@@ -259,42 +281,55 @@ def upload_medical_record(health_id):
 def get_government_dashboard():
     total_citizens = Citizen.query.count()
     active_chronic = Condition.query.filter_by(status='Active').count()
+    condition_counts = Counter(c.name for c in Condition.query.all())
+    medicine_counts = Counter(m.name.split()[0] for m in Medication.query.filter_by(active=True).all())
+    pending_followups = FollowUp.query.filter(FollowUp.status.in_(['Upcoming', 'Pending'])).count()
+    pregnancy_tracking = Condition.query.filter(
+        Condition.name.ilike('%pregnan%'),
+        Condition.status == 'Active'
+    ).count()
+    completed_followups = FollowUp.query.filter_by(status='Completed').count()
+    total_followups = FollowUp.query.count()
+    compliance = round((completed_followups / total_followups) * 100) if total_followups else 0
+    common_diseases = [
+        {'name': name, 'count': count}
+        for name, count in condition_counts.most_common(4)
+    ]
+    trending_diseases = [
+        {'name': name, 'trend': 'up' if count > 1 else 'stable'}
+        for name, count in condition_counts.most_common(3)
+    ]
+    medicine_demand = [
+        {'name': name, 'status': 'High Demand' if count > 1 else 'Stable'}
+        for name, count in medicine_counts.most_common(3)
+    ]
     
     dashboard_data = {
         'district_overview': {
             'registered_citizens': total_citizens,
             'active_chronic_patients': active_chronic,
-            'follow_up_compliance': '87%',
-            'pregnancy_tracking': 1420,
-            'vaccination_coverage': '92%'
+            'follow_up_compliance': f'{compliance}%',
+            'pregnancy_tracking': pregnancy_tracking,
+            'vaccination_coverage': '0%'
         },
-        'most_common_diseases': [
-            {'name': 'Diabetes', 'count': 4500},
-            {'name': 'Hypertension', 'count': 3800},
-            {'name': 'Anemia', 'count': 2100},
-            {'name': 'Asthma', 'count': 1200}
-        ],
-        'trending_diseases': [
-            {'name': 'Dengue', 'trend': 'up'},
-            {'name': 'Viral Fever', 'trend': 'up'},
-            {'name': 'Malaria', 'trend': 'down'}
-        ],
-        'medicine_demand': [
-            {'name': 'Insulin', 'status': 'High Demand'},
-            {'name': 'Paracetamol', 'status': 'Stable'},
-            {'name': 'Iron Tablets', 'status': 'Moderate Demand'}
-        ],
-        'pending_follow_ups': 427
+        'most_common_diseases': common_diseases,
+        'trending_diseases': trending_diseases,
+        'medicine_demand': medicine_demand,
+        'pending_follow_ups': pending_followups
     }
     return jsonify(dashboard_data), 200
 
 @app.route('/api/government/analytics', methods=['GET'])
 def get_healthcare_analytics():
+    condition_counts = Counter(c.name for c in Condition.query.all())
+    regions = ["Rampur PHC", "Rampur Community Clinic", "District Diagnostic Lab"]
     heatmap_data = [
-        {'region': 'District Center', 'disease': 'Diabetes', 'level': 'High'},
-        {'region': 'North PHC', 'disease': 'Hypertension', 'level': 'Medium'},
-        {'region': 'East Village', 'disease': 'Vaccination', 'level': 'Low'},
-        {'region': 'South Village', 'disease': 'Anemia', 'level': 'High'}
+        {
+            'region': regions[index % len(regions)],
+            'disease': name,
+            'level': 'High' if count > 1 else 'Medium'
+        }
+        for index, (name, count) in enumerate(condition_counts.most_common(4))
     ]
     return jsonify({'heatmap': heatmap_data}), 200
 

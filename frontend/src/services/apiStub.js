@@ -122,8 +122,8 @@ export const apiStub = {
         title: e.title,
         type: e.event_type,
         details: e.description,
-        doctor: e.title.includes('Consultation') ? 'Dr. Sharma' : 'Clinical Staff', 
-        facility: e.title.includes('Consultation') ? 'Rampur PHC' : 'City Hospital'
+        doctor: e.title.includes('Consultation') ? 'Dr. Meera Sharma' : 'Clinical Staff',
+        facility: e.title.includes('Consultation') ? 'Rampur Primary Health Centre' : 'MedFlow Linked Facility'
       })).sort((a, b) => b.year - a.year);
     } catch (err) {
       console.error(err);
@@ -144,7 +144,13 @@ export const apiStub = {
         pregnancyTracking: data.district_overview.pregnancy_tracking,
         vaccinationCoverage: parseFloat(data.district_overview.vaccination_coverage),
         pendingFollowUps: data.pending_follow_ups,
-        commonDiseases: data.most_common_diseases.map(d => ({ name: d.name, count: d.count, pct: 25 })),
+        commonDiseases: data.most_common_diseases.map(d => ({
+          name: d.name,
+          count: d.count,
+          pct: data.district_overview.registered_citizens
+            ? Math.round((d.count / data.district_overview.registered_citizens) * 100)
+            : 0
+        })),
         trendingDiseases: data.trending_diseases.map(d => ({ name: d.name, trend: d.trend, pct: 10 })),
         medicineDemand: data.medicine_demand.map(m => ({ name: m.name, stock: 50, status: m.status }))
       };
@@ -189,15 +195,38 @@ export const apiStub = {
         method: 'POST',
         body: formData
       });
+
+      let aiData = null;
+      try {
+        aiData = await extractRes.json();
+      } catch {
+        aiData = {};
+      }
       
       if (!extractRes.ok) {
-        throw new Error(`AI Extraction failed: ${extractRes.statusText}`);
+        const message = aiData.message || aiData.error || extractRes.statusText;
+        throw new Error(`AI extraction failed: ${message}`);
       }
       
       if (onProgress) onProgress("AI Extraction complete. Saving structured data...");
       
-      const aiData = await extractRes.json();
       logApiCall("POST", `/api/ai/extract`, extractRes.status, aiData);
+
+      const extractedEvent = aiData.event || aiData;
+      const failedExtraction = extractedEvent.extraction_confidence === "low"
+        && !extractedEvent.hospital_or_clinic
+        && !extractedEvent.doctor_name
+        && (!extractedEvent.diagnosis || extractedEvent.diagnosis.length === 0)
+        && (!extractedEvent.medications || extractedEvent.medications.length === 0)
+        && (!extractedEvent.lab_results || extractedEvent.lab_results.length === 0)
+        && (
+          (extractedEvent.notes || "").includes("LLM parsing failed")
+          || (extractedEvent.notes || "").includes("LLM text extraction failed")
+        );
+
+      if (failedExtraction) {
+        throw new Error(extractedEvent.notes || "AI extraction failed. No record was saved.");
+      }
       
       let structuredSummary = {};
       let hospital = "Unknown Clinic";
@@ -243,6 +272,10 @@ export const apiStub = {
       
       const saveData = await saveRes.json();
       logApiCall("POST", `/api/citizens/${CITIZEN_ID}/records/upload`, saveRes.status, saveData);
+
+      if (!saveRes.ok) {
+        throw new Error(saveData.message || saveData.error || "Could not save the extracted record.");
+      }
       
       if (onProgress) onProgress("Record successfully ingested and linked to Timeline.");
       
@@ -250,7 +283,7 @@ export const apiStub = {
     } catch (err) {
       console.error(err);
       if (onProgress) onProgress("Error: " + err.message);
-      return { status: "Error" };
+      return { status: "Error", message: err.message };
     }
   },
 

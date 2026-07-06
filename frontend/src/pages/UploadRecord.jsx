@@ -75,7 +75,10 @@ export default function UploadRecord({ reloadData, setPage, language }) {
       });
       setProcessing(false);
       if (result.status === 'Error') {
-        alert(language === 'en' ? 'AI extraction failed. Please try a clearer image or PDF.' : 'एआई निष्कर्षण विफल। कृपया स्पष्ट छवि या PDF आज़माएं।');
+        const fallback = language === 'en'
+          ? 'AI extraction failed. Please try again or check the backend AI key.'
+          : 'एआई निष्कर्षण विफल। कृपया बैकएंड AI key जांचें या दोबारा प्रयास करें।';
+        alert(result.message || fallback);
         return;
       }
       setFinished(true);

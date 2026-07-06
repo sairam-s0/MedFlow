@@ -49,7 +49,7 @@ def run_tests():
     # 8. Upload Record
     upload_payload = {
         "health_id": HEALTH_ID,
-        "hospital": "City Hospital",
+        "hospital": "Rampur Primary Health Centre",
         "date": "2025-07-04",
         "record_type": "Radiology",
         "structured_summary": {"Finding": "Normal X-Ray"}
