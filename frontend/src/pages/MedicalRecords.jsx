@@ -18,7 +18,7 @@ export default function MedicalRecords({ records, language }) {
   const t = {
     title: language === 'en' ? 'Medical DigiLocker' : 'चिकित्सा डिजीलॉकर',
     subtitle: language === 'en' ? 'Verified and structured digital health documents' : 'सत्यापित और संरचित डिजिटल स्वास्थ्य दस्तावेज',
-    verified: language === 'en' ? 'Verified ABDM' : 'सत्यापित आभा',
+    verified: language === 'en' ? 'Demo Verified' : 'डेमो सत्यापित',
     facility: language === 'en' ? 'Hospital:' : 'चिकित्सालय:',
     clinician: language === 'en' ? 'Doctor:' : 'चिकित्सक:',
     date: language === 'en' ? 'Date:' : 'दिनांक:',
@@ -162,7 +162,7 @@ export default function MedicalRecords({ records, language }) {
                 <FileText size={48} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
                 <p style={{ fontWeight: 600 }}>[MOCK PDF] {selectedRecord.title}.pdf</p>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }} className={language === 'hi' ? 'hindi-text' : ''}>
-                  {language === 'en' ? 'Original scans are archived securely in accordance with ABDM consent architecture guidelines.' : 'मूल स्कैन डिजिटल सहमति वास्तुकला दिशानिर्देशों के अनुसार सुरक्षित रूप से संग्रहीत हैं।'}
+                  {language === 'en' ? 'Original scans are represented here as demo placeholders for the prototype.' : 'मूल स्कैन इस प्रोटोटाइप में डेमो प्लेसहोल्डर के रूप में दिखाए गए हैं।'}
                 </p>
                 <span className="badge badge-green" style={{ marginTop: '16px' }}>
                   <CheckCircle2 size={12} /> <span className={language === 'hi' ? 'hindi-text' : ''}>{language === 'en' ? 'Digital Hash Verified' : 'डिजिटल हैश सत्यापित'}</span>

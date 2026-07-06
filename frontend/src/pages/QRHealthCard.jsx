@@ -31,16 +31,16 @@ export default function QRHealthCard({ profile, language }) {
   ].join('\n');
 
   const t = {
-    title: language === 'en' ? 'National Digital Health Card (Sample)' : 'राष्ट्रीय डिजिटल स्वास्थ्य कार्ड (नमूना)',
-    subtitle: language === 'en' ? 'Secure clinic record check-in via ABDM Consent Gateway' : 'आभा सहमति गेटवे के माध्यम से सुरक्षित क्लिनिक चेक-इन',
-    ministry: language === 'en' ? 'Ministry of Health & Family Welfare (Sample Card)' : 'स्वास्थ्य एवं परिवार कल्याण मंत्रालय (नमूना कार्ड)',
-    govIndia: language === 'en' ? 'VERIFIED ABHA' : 'सत्यापित आभा',
+    title: language === 'en' ? 'Digital Health Card (Demo)' : 'डिजिटल स्वास्थ्य कार्ड (डेमो)',
+    subtitle: language === 'en' ? 'Independent prototype inspired by consent-based health record access' : 'सहमति-आधारित हेल्थ रिकॉर्ड एक्सेस से प्रेरित स्वतंत्र प्रोटोटाइप',
+    ministry: language === 'en' ? 'MedFlow Demo Card' : 'मेडफ्लो डेमो कार्ड',
+    govIndia: language === 'en' ? 'DEMO CARD' : 'डेमो कार्ड',
     citizenName: language === 'en' ? 'Citizen Name' : 'नागरिक का नाम',
     gender: language === 'en' ? 'Gender' : 'लिंग',
     blood: language === 'en' ? 'Blood Group' : 'रक्त समूह',
-    abhaNum: language === 'en' ? 'ABHA Number' : 'आभा संख्या',
+    abhaNum: language === 'en' ? 'Demo Health ID' : 'डेमो हेल्थ आईडी',
     footerLeft: language === 'en' ? 'Lifelong digital record ownership (Simulation)' : 'आजीवन डिजिटल रिकॉर्ड स्वामित्व (अनुकरण)',
-    footerRight: language === 'en' ? 'ABDM Compliant' : 'आभा (ABDM) अनुपालन',
+    footerRight: language === 'en' ? 'Inspired by ABDM workflows' : 'ABDM वर्कफ्लो से प्रेरित',
     offlineTitle: language === 'en' ? 'Rural India Offline Compatibility' : 'ग्रामीण भारत ऑफ़लाइन सुसंगतता',
     offlineDesc: language === 'en' ? 'This card can be printed physically for rural regions lacking continuous network access. Doctors scan the offline QR card to fetch cached clinical metadata instantly upon securing user consent.' : 'इस कार्ड को उन ग्रामीण क्षेत्रों के लिए प्रिंट किया जा सकता है जहां इंटरनेट की निरंतर पहुंच नहीं है। डॉक्टर उपचार सहमति प्राप्त करने के बाद रोगी चिकित्सा विवरण लोड करने के लिए इसे स्कैन कर सकते हैं।',
     male: language === 'en' ? 'Male' : 'पुरुष'
@@ -57,7 +57,7 @@ export default function QRHealthCard({ profile, language }) {
         </p>
       </div>
 
-      {/* Styled Physical ABHA Card */}
+      {/* Styled physical demo health card */}
       <div className="dashboard-card animate-scale-in" style={{
         background: 'linear-gradient(135deg, #0b2240 0%, #1e293b 100%)',
         color: 'white',
@@ -97,7 +97,7 @@ export default function QRHealthCard({ profile, language }) {
             justifyContent: 'center',
             boxShadow: 'var(--shadow-md)'
           }}>
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrData)}&ecc=H`} alt="ABHA QR Code" style={{ width: '130px', height: '130px' }} />
+          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrData)}&ecc=H`} alt="Demo health QR code" style={{ width: '130px', height: '130px' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }} className={language === 'hi' ? 'hindi-text' : ''}>
@@ -124,7 +124,7 @@ export default function QRHealthCard({ profile, language }) {
                 <button 
                   onClick={handleCopyId} 
                   style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', opacity: 0.7, padding: '2px' }}
-                  title="Copy ABHA ID"
+                  title="Copy demo health ID"
                 >
                   {copied ? <Check size={14} color="var(--gov-green)" /> : <Copy size={14} />}
                 </button>

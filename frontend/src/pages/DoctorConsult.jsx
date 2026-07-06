@@ -27,7 +27,7 @@ export default function DoctorConsult({ profile, records, timeline, reloadData, 
     patientLabel: language === 'en' ? 'Patient' : 'रोगी',
     bioLabel: language === 'en' ? 'Bio' : 'विवरण',
     bloodLabel: language === 'en' ? 'Blood Group' : 'रक्त समूह',
-    abhaLabel: language === 'en' ? 'ABHA ID' : 'आभा आईडी',
+    abhaLabel: language === 'en' ? 'Demo Health ID' : 'डेमो हेल्थ आईडी',
     risksTitle: language === 'en' ? 'Clinical Risks & Vitals' : 'नैदानिक ​​जोखिम और वाइटल्स',
     allergies: language === 'en' ? 'Allergies' : 'एलर्जी',
     conditions: language === 'en' ? 'Current Conditions' : 'सक्रिय रोग स्थितियां',
@@ -123,7 +123,7 @@ export default function DoctorConsult({ profile, records, timeline, reloadData, 
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <select className="form-control" style={{ textAlign: 'center' }}>
-                <option value="aarav">Aarav Sharma (ABHA: 91-4829-1029-4821)</option>
+                <option value="aarav">Aarav Sharma (Demo ID: 91-4829-1029-4821)</option>
               </select>
               <button className="btn btn-primary" onClick={handleSimulateScan} style={{ width: '100%' }}>
                 <span className={language === 'hi' ? 'hindi-text' : ''}>{t.scanBtn}</span>

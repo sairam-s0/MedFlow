@@ -6,8 +6,8 @@ export default function CitizenHome({ profile, setPage, language }) {
 
   const t = {
     title: language === 'en' ? 'Citizen Health Portal' : 'नागरिक स्वास्थ्य पोर्टल',
-    subtitle: language === 'en' ? 'Lifelong Digital Medical Identity' : 'आजीवन डिजिटल चिकित्सा पहचान (ABHA)',
-    abhaId: language === 'en' ? 'ABHA ID:' : 'आभा संख्या:',
+    subtitle: language === 'en' ? 'Demo lifelong medical identity' : 'डेमो आजीवन डिजिटल चिकित्सा पहचान',
+    abhaId: language === 'en' ? 'Demo Health ID:' : 'डेमो हेल्थ आईडी:',
     bioGender: language === 'en' ? 'Age / Gender:' : 'आयु / लिंग:',
     bloodGroup: language === 'en' ? 'Blood Group:' : 'रक्त समूह:',
     secureQr: language === 'en' ? 'Secure QR Card' : 'सुरक्षित क्यूआर कार्ड',

@@ -4,7 +4,7 @@ import json
 
 def seed_data():
     with app.app_context():
-        # Clean up database if you want a fresh seed, since schema changed.
+
         db.drop_all()
         db.create_all()
 

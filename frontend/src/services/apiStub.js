@@ -163,6 +163,8 @@ const OFFLINE_GOV = {
 // =====================================================================
 // API INTERFACES
 // =====================================================================
+
+const friendlyExtractionMessage = "The document could not be read confidently. No record was saved. Please retry with a clearer, well-lit scan or upload a sharper PDF.";
 export const apiStub = {
   getCitizenProfile: async () => {
     try {
@@ -394,7 +396,10 @@ export const apiStub = {
       }
       
       if (!extractRes.ok) {
-        throw new Error("Backend offline or extraction failed");
+        const message = extractRes.status === 422
+          ? friendlyExtractionMessage
+          : (aiData.message || aiData.error || extractRes.statusText);
+        throw new Error(message);
       }
       
       if (onProgress) onProgress("AI Extraction complete. Saving structured data...");
@@ -402,6 +407,20 @@ export const apiStub = {
       logApiCall("POST", `/api/ai/extract`, extractRes.status, aiData);
 
       const extractedEvent = aiData.event || aiData;
+      const failedExtraction = extractedEvent.extraction_confidence === "low"
+        && !extractedEvent.hospital_or_clinic
+        && !extractedEvent.doctor_name
+        && (!extractedEvent.diagnosis || extractedEvent.diagnosis.length === 0)
+        && (!extractedEvent.medications || extractedEvent.medications.length === 0)
+        && (!extractedEvent.lab_results || extractedEvent.lab_results.length === 0)
+        && (
+          (extractedEvent.notes || "").includes("LLM parsing failed")
+          || (extractedEvent.notes || "").includes("LLM text extraction failed")
+        );
+
+      if (failedExtraction) {
+        throw new Error(friendlyExtractionMessage);
+      }
       
       let structuredSummary = {};
       let hospital = "Unknown Clinic";
@@ -447,7 +466,12 @@ export const apiStub = {
       const saveData = await saveRes.json();
       logApiCall("POST", `/api/citizens/${activeCitizenId}/records/upload`, saveRes.status, saveData);
 
-      if (!saveRes.ok) throw new Error("Save failed");
+      if (!saveRes.ok) {
+        const message = saveRes.status === 422
+          ? friendlyExtractionMessage
+          : (saveData.message || saveData.error || "Could not save the extracted record.");
+        throw new Error(message);
+      }
       
       if (onProgress) onProgress("Record successfully ingested and linked to Timeline.");
       return { status: "Success", recordId: saveData.record_id };

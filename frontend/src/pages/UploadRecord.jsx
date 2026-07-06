@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, CheckCircle2, RefreshCw, ArrowRight, Sparkles, FileText, X } from 'lucide-react';
+import { Upload, CheckCircle2, RefreshCw, ArrowRight, Sparkles, FileText, X, AlertCircle } from 'lucide-react';
 import { apiStub } from '../services/apiStub';
 
 export default function UploadRecord({ reloadData, setPage, language }) {
@@ -8,6 +8,7 @@ export default function UploadRecord({ reloadData, setPage, language }) {
   const [processing, setProcessing] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
   const [finished, setFinished] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const [extractedRecordId, setExtractedRecordId] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
@@ -16,9 +17,12 @@ export default function UploadRecord({ reloadData, setPage, language }) {
     title: language === 'en' ? 'Ingest Unstructured Records' : 'असंरचित मेडिकल दस्तावेज़ अपलोड करें',
     subtitle: language === 'en' ? 'OCR & Gemini Entity Extraction Pipeline' : 'ओसीआर और जेमिनी एंटिटी निष्कर्षण पाइपलाइन',
     aiProcessor: language === 'en' ? 'AI Medical Processor Active' : 'एआई क्लिनिकल प्रोसेसर सक्रिय',
-    fhirConversion: language === 'en' ? 'Converting scan into FHIR-compliant structured medical events...' : 'स्कैन की गई छवि को FHIR-अनुपालन संरचित घटनाओं में परिवर्तित किया जा रहा है...',
+    fhirConversion: language === 'en' ? 'Converting scan into structured medical events...' : 'स्कैन की गई छवि को संरचित चिकित्सा घटनाओं में परिवर्तित किया जा रहा है...',
     successTitle: language === 'en' ? 'Clinical Ingestion Completed' : 'दस्तावेज़ विश्लेषण और एकीकरण पूर्ण',
     successDesc: language === 'en' ? 'Document parsed successfully. Extracted clinical summary has been written to the profile timeline.' : 'दस्तावेज़ सफलतापूर्वक पार्स हो गया है। प्राप्त सारांश को इतिहास समय-रेखा पर दर्ज कर दिया गया है।',
+    retryTitle: language === 'en' ? 'We could not read enough clinical detail' : 'पर्याप्त चिकित्सकीय जानकारी नहीं पढ़ी जा सकी',
+    retryDesc: language === 'en' ? 'No record was saved. Try a clearer scan, crop out extra background, or upload a PDF/image with sharper text.' : 'कोई रिकॉर्ड सेव नहीं किया गया। कृपया साफ स्कैन, कम बैकग्राउंड, या स्पष्ट टेक्स्ट वाली PDF/छवि अपलोड करें।',
+    retryBtn: language === 'en' ? 'Try Again' : 'फिर से प्रयास करें',
     uploadAnother: language === 'en' ? 'Upload Another' : 'दूसरा अपलोड करें',
     viewTimeline: language === 'en' ? 'View Timeline' : 'समय-रेखा देखें',
     dragTitle: language === 'en' ? 'Drag & Drop or Click to Select' : 'खींचें और छोड़ें या क्लिक करें',
@@ -59,6 +63,7 @@ export default function UploadRecord({ reloadData, setPage, language }) {
     }
     setProcessing(true);
     setFinished(false);
+    setUploadError(null);
     setProgressMsg(language === 'en' ? 'Initiating document upload buffer...' : 'दस्तावेज़ अपलोड बफर शुरू किया जा रहा है...');
 
     const translateMsg = (msg) => {
@@ -76,9 +81,9 @@ export default function UploadRecord({ reloadData, setPage, language }) {
       setProcessing(false);
       if (result.status === 'Error') {
         const fallback = language === 'en'
-          ? 'AI extraction failed. Please try again or check the backend AI key.'
-          : 'एआई निष्कर्षण विफल। कृपया बैकएंड AI key जांचें या दोबारा प्रयास करें।';
-        alert(result.message || fallback);
+          ? 'The AI pipeline could not extract reliable information from this file.'
+          : 'एआई पाइपलाइन इस फ़ाइल से भरोसेमंद जानकारी नहीं निकाल सकी।';
+        setUploadError(result.userMessage || result.message || fallback);
         return;
       }
       setFinished(true);
@@ -86,7 +91,10 @@ export default function UploadRecord({ reloadData, setPage, language }) {
       reloadData();
     } catch (err) {
       setProcessing(false);
-      alert(language === 'en' ? 'Error processing file.' : 'फ़ाइल प्रसंस्करण में त्रुटि।');
+      setUploadError(language === 'en'
+        ? 'Something went wrong while processing the file. Please retry with a clearer scan.'
+        : 'फ़ाइल संसाधित करते समय समस्या हुई। कृपया साफ स्कैन के साथ फिर प्रयास करें।'
+      );
     }
   };
 
@@ -122,6 +130,37 @@ export default function UploadRecord({ reloadData, setPage, language }) {
             <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '16px' }} className={language === 'hi' ? 'hindi-text' : ''}>
               {t.fhirConversion}
             </p>
+          </div>
+        ) : uploadError ? (
+          <div style={{ textAlign: 'center', padding: '32px 24px' }} className="animate-scale-in">
+            <AlertCircle size={54} color="var(--warning)" style={{ margin: '0 auto 16px auto', display: 'block' }} />
+            <h3 style={{ fontWeight: 700, marginBottom: '8px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.retryTitle}</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '0 auto 12px auto', maxWidth: '440px', lineHeight: 1.5 }} className={language === 'hi' ? 'hindi-text' : ''}>
+              {t.retryDesc}
+            </p>
+            <div style={{
+              backgroundColor: 'var(--warning-light)',
+              border: '1px solid var(--warning)',
+              borderRadius: '8px',
+              color: '#855100',
+              fontSize: '0.82rem',
+              padding: '12px',
+              margin: '0 auto 22px auto',
+              maxWidth: '460px',
+              textAlign: 'left'
+            }}>
+              {uploadError}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" onClick={() => { setUploadError(null); setSelectedFile(null); }}>
+                <X size={16} />
+                <span className={language === 'hi' ? 'hindi-text' : ''}>{language === 'en' ? 'Choose Different File' : 'दूसरी फ़ाइल चुनें'}</span>
+              </button>
+              <button className="btn btn-primary" onClick={() => setUploadError(null)} style={{ gap: '6px' }}>
+                <RefreshCw size={16} />
+                <span className={language === 'hi' ? 'hindi-text' : ''}>{t.retryBtn}</span>
+              </button>
+            </div>
           </div>
         ) : finished ? (
           <div style={{ textAlign: 'center', padding: '30px' }} className="animate-scale-in">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, User, HeartPulse, Building2, Map, RotateCcw, LogOut } from 'lucide-react';
+import { Shield, User, HeartPulse, Building2, Map, RotateCcw, LogOut, FlaskConical } from 'lucide-react';
 import { apiStub } from '../services/apiStub';
 
 export default function Header({ currentPage, setCurrentPage, reloadData, language, setLanguage, user, onLogout }) {
@@ -100,7 +100,7 @@ export default function Header({ currentPage, setCurrentPage, reloadData, langua
                 {language === 'hi' ? 'प्रस्तावित मॉडल' : 'PROPOSED CONCEPT'}
               </span>
               <span className="badge badge-saffron" style={{ fontSize: '0.6rem', padding: '3px 8px', letterSpacing: '0.05em' }}>
-                {language === 'hi' ? 'आभा डेमो' : 'ABDM SANDBOX'}
+                {language === 'hi' ? 'डेमो मोड' : 'DEMO MODE'}
               </span>
             </h1>
             <p style={{
@@ -111,13 +111,30 @@ export default function Header({ currentPage, setCurrentPage, reloadData, langua
               letterSpacing: '0.05em',
               marginTop: '2px'
             }}>
-              {language === 'hi' ? 'राष्ट्रीय डिजिटल स्वास्थ्य मिशन (प्रस्तावित डेमो)' : 'National Digital Health Mission (Proposal Prototype)'}
+              {language === 'hi' ? 'भारत के डिजिटल हेल्थ वर्कफ्लो से प्रेरित स्वतंत्र प्रोटोटाइप' : 'Independent prototype inspired by India digital health workflows'}
             </p>
           </div>
         </div>
 
         {/* Workspace Nav links and Language Switcher */}
         <nav style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span
+            className="badge"
+            title={language === 'hi' ? 'लॉगिन और नमूना डेटा प्रस्तुति के लिए सिम्युलेट किए गए हैं' : 'Authentication and sample records are simulated for this demo'}
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              color: '#f8fafc',
+              border: '1px solid rgba(255,255,255,0.22)',
+              gap: '6px',
+              padding: '7px 10px',
+              textTransform: 'none'
+            }}
+          >
+            <FlaskConical size={14} />
+            <span className={language === 'hi' ? 'hindi-text' : ''}>
+              {language === 'hi' ? 'डेमो लॉगिन' : 'Demo auth'}
+            </span>
+          </span>
           {navItems.map(item => {
             const isActive = currentPage === item.id;
             return (
