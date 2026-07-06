@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
+import Login from './pages/Login';
 
 // Pages
 import CitizenHome from './pages/CitizenHome';
@@ -11,10 +12,13 @@ import GovtDashboard from './pages/GovtDashboard';
 import HealthcareMap from './pages/HealthcareMap';
 import UploadRecord from './pages/UploadRecord';
 
-import { apiStub } from './services/apiStub';
+import { apiStub, setActiveCitizenId } from './services/apiStub';
 import { Home, Folder, CalendarDays, QrCode, UploadCloud } from 'lucide-react';
 
 export default function App() {
+  // Authentication State
+  const [user, setUser] = useState(null); // { role: 'citizen'|'doctor'|'govt', id: '...' }
+
   // Navigation: 'citizen' | 'doctor' | 'govt' | 'map'
   const [currentPage, setCurrentPage] = useState('citizen');
   
@@ -42,13 +46,37 @@ export default function App() {
       setTimeline(t);
       setGovtMetrics(g);
     } catch (err) {
-      console.error("Error loading clinical data from mock database.", err);
+      console.error("Error loading data from database.", err);
     }
   };
 
   useEffect(() => {
-    fetchRegistryData();
-  }, []);
+    if (user) {
+      fetchRegistryData();
+    }
+  }, [user]);
+
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+    if (loggedInUser.role === 'citizen') {
+      setActiveCitizenId(loggedInUser.id);
+      setCurrentPage('citizen');
+      setCitizenSubPage('home');
+    } else if (loggedInUser.role === 'doctor') {
+      // For doctor desk, we still load citizen data in backend to simulate patient consult scanning
+      setActiveCitizenId('QR-12345-ABCD'); // Default sandbox scan patient
+      setCurrentPage('doctor');
+    } else if (loggedInUser.role === 'govt') {
+      setCurrentPage('govt');
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setProfile(null);
+    setRecords([]);
+    setTimeline([]);
+  };
 
   const navigateCitizen = (subPage) => {
     setCurrentPage('citizen');
@@ -137,15 +165,40 @@ export default function App() {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Simplified Bilingual Header for Login page */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          padding: '16px 24px', 
+          backgroundColor: 'var(--gov-navy)',
+          borderBottom: '4px solid #ff9933'
+        }}>
+          <div style={{ display: 'flex', gap: '2px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.15)', padding: '2px', borderRadius: '8px' }}>
+            <button onClick={() => setLanguage('en')} style={{ background: language === 'en' ? 'var(--gov-gold)' : 'transparent', border: 'none', color: 'white', fontSize: '0.725rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}>EN</button>
+            <button onClick={() => setLanguage('hi')} style={{ background: language === 'hi' ? 'var(--gov-gold)' : 'transparent', border: 'none', color: 'white', fontSize: '0.725rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }} className="hindi-text">हिन्दी</button>
+          </div>
+        </div>
+        <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', flex: 1 }}>
+          <Login onLogin={handleLogin} language={language} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
-      {/* Bottom ABDM Emblem Header */}
+      {/* Bottom Emblem Header */}
       <Header 
         currentPage={currentPage} 
         setCurrentPage={setCurrentPage} 
         reloadData={fetchRegistryData}
         language={language}
         setLanguage={setLanguage}
+        user={user}
+        onLogout={handleLogout}
       />
 
       {/* Main Panel */}

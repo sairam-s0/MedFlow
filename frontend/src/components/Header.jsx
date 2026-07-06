@@ -1,8 +1,8 @@
 import React from 'react';
-import { Shield, User, HeartPulse, Building2, Map, RotateCcw } from 'lucide-react';
+import { Shield, User, HeartPulse, Building2, Map, RotateCcw, LogOut } from 'lucide-react';
 import { apiStub } from '../services/apiStub';
 
-export default function Header({ currentPage, setCurrentPage, reloadData, language, setLanguage }) {
+export default function Header({ currentPage, setCurrentPage, reloadData, language, setLanguage, user, onLogout }) {
   
   const handleReset = () => {
     const msg = language === 'hi' 
@@ -15,12 +15,19 @@ export default function Header({ currentPage, setCurrentPage, reloadData, langua
     }
   };
 
-  const navItems = [
+  const allNavItems = [
     { id: 'citizen', label_en: 'Citizen Portal', label_hi: 'नागरिक पोर्टल', icon: <User size={16} /> },
     { id: 'doctor', label_en: 'Clinical Desk', label_hi: 'नैदानिक डेस्क', icon: <HeartPulse size={16} /> },
     { id: 'govt', label_en: 'Govt Operations', label_hi: 'सरकारी संचालन', icon: <Building2 size={16} /> },
     { id: 'map', label_en: 'Map Analytics', label_hi: 'मानचित्र विश्लेषिकी', icon: <Map size={16} /> }
   ];
+
+  // Filter navigation items by role
+  const navItems = allNavItems.filter(item => {
+    if (!user) return false;
+    if (item.id === 'map') return true; // Everyone can access the map
+    return item.id === user.role;
+  });
 
   return (
     <header style={{
@@ -193,6 +200,24 @@ export default function Header({ currentPage, setCurrentPage, reloadData, langua
           >
             <RotateCcw size={16} />
           </button>
+
+          {/* Logout Button */}
+          {user && (
+            <button
+              onClick={onLogout}
+              className="btn"
+              title={language === 'hi' ? 'लॉगआउट' : 'Logout'}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                color: '#e2e8f0',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+              }}
+            >
+              <LogOut size={16} />
+            </button>
+          )}
         </nav>
       </div>
     </header>
