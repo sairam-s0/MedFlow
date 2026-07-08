@@ -11,9 +11,10 @@ import QRHealthCard from './pages/QRHealthCard';
 import GovtDashboard from './pages/GovtDashboard';
 import HealthcareMap from './pages/HealthcareMap';
 import UploadRecord from './pages/UploadRecord';
+import PersonalAnalytics from './pages/PersonalAnalytics';
 
 import { apiStub, setActiveCitizenId } from './services/apiStub';
-import { Home, Folder, CalendarDays, QrCode, UploadCloud } from 'lucide-react';
+import { Home, Folder, CalendarDays, QrCode, UploadCloud, BarChart3 } from 'lucide-react';
 
 export default function App() {
   // Authentication State
@@ -22,29 +23,54 @@ export default function App() {
   // Navigation: 'citizen' | 'doctor' | 'govt' | 'map'
   const [currentPage, setCurrentPage] = useState('citizen');
   
-  // Citizen sub-pages: 'home' | 'records' | 'timeline' | 'qr' | 'upload'
+  // Citizen sub-pages: 'home' | 'records' | 'timeline' | 'qr' | 'upload' | 'analytics'
   const [citizenSubPage, setCitizenSubPage] = useState('home');
 
   // Bilingual translation state: 'en' | 'hi'
   const [language, setLanguage] = useState('en');
+  const [t, setT] = useState(null);
 
   // Unified Application States
   const [profile, setProfile] = useState(null);
-  const [records, setRecords] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [govtMetrics, setGovtMetrics] = useState(null);
 
-  const fetchRegistryData = async () => {
-    try {
-      const p = await apiStub.getCitizenProfile();
-      const r = await apiStub.getMedicalRecords();
-      const t = await apiStub.getHealthTimeline();
-      const g = await apiStub.getGovtMetrics();
+  // Load translations dynamically
+  useEffect(() => {
+    fetch(`/locales/${language}.json`)
+      .then(res => res.json())
+      .then(data => setT(data))
+      .catch(err => console.error("Error loading localization files:", err));
+  }, [language]);
 
-      setProfile(p);
-      setRecords(r);
-      setTimeline(t);
-      setGovtMetrics(g);
+  // Check login session on mount
+  useEffect(() => {
+    const savedUser = apiStub.getLoggedInUser();
+    const token = localStorage.getItem('medflow_token');
+    if (savedUser && token) {
+      setUser(savedUser);
+      if (savedUser.role === 'citizen') {
+        setActiveCitizenId(savedUser.id);
+        setCurrentPage('citizen');
+        setCitizenSubPage('home');
+      } else {
+        setCurrentPage(savedUser.role);
+      }
+    }
+  }, []);
+
+  const fetchRegistryData = async () => {
+    if (!user) return;
+    try {
+      if (user.role === 'citizen') {
+        const p = await apiStub.getCitizenProfile();
+        const t_data = await apiStub.getHealthTimeline();
+        setProfile(p);
+        setTimeline(t_data);
+      } else if (user.role === 'govt') {
+        const g = await apiStub.getGovtMetrics();
+        setGovtMetrics(g);
+      }
     } catch (err) {
       console.error("Error loading data from database.", err);
     }
@@ -63,19 +89,18 @@ export default function App() {
       setCurrentPage('citizen');
       setCitizenSubPage('home');
     } else if (loggedInUser.role === 'doctor') {
-      // For doctor desk, we still load citizen data in backend to simulate patient consult scanning
-      setActiveCitizenId('QR-12345-ABCD'); // Default sandbox scan patient
       setCurrentPage('doctor');
     } else if (loggedInUser.role === 'govt') {
       setCurrentPage('govt');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await apiStub.logout();
     setUser(null);
     setProfile(null);
-    setRecords([]);
     setTimeline([]);
+    setGovtMetrics(null);
   };
 
   const navigateCitizen = (subPage) => {
@@ -85,12 +110,17 @@ export default function App() {
   };
 
   const citizenTabs = [
-    { id: 'home', label_en: 'Health Profile', label_hi: 'स्वास्थ्य प्रोफ़ाइल', icon: <Home size={16} /> },
-    { id: 'records', label_en: 'Medical Records', label_hi: 'चिकित्सा रिकॉर्ड', icon: <Folder size={16} /> },
-    { id: 'timeline', label_en: 'Health Timeline', label_hi: 'स्वास्थ्य समय-रेखा', icon: <CalendarDays size={16} /> },
-    { id: 'qr', label_en: 'QR Health Card', label_hi: 'क्यूआर स्वास्थ्य कार्ड', icon: <QrCode size={16} /> },
-    { id: 'upload', label_en: 'Upload Document', label_hi: 'दस्तावेज़ अपलोड करें', icon: <UploadCloud size={16} /> }
+    { id: 'home', icon: <Home size={16} />, key: 'homeTab' },
+    { id: 'records', icon: <Folder size={16} />, key: 'recordsTab' },
+    { id: 'timeline', icon: <CalendarDays size={16} />, key: 'timelineTab' },
+    { id: 'analytics', icon: <BarChart3 size={16} />, key: 'analyticsTab' },
+    { id: 'qr', icon: <QrCode size={16} />, key: 'qrTab' },
+    { id: 'upload', icon: <UploadCloud size={16} />, key: 'uploadTab' }
   ];
+
+  if (!t) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--surface)', color: 'var(--text-primary)', fontWeight: 600 }}>Loading MedFlow Platform...</div>;
+  }
 
   const renderPageContent = () => {
     switch (currentPage) {
@@ -123,42 +153,42 @@ export default function App() {
                     cursor: 'pointer',
                     color: citizenSubPage === tab.id ? 'var(--primary)' : 'var(--text-secondary)',
                     borderBottom: citizenSubPage === tab.id ? '3px solid var(--primary)' : '3px solid transparent',
-                    transition: 'all var(--transition-fast)'
+                    transition: 'all var(--transition-fast)',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {tab.icon}
                   <span className={language === 'hi' ? 'hindi-text' : ''}>
-                    {language === 'hi' ? tab.label_hi : tab.label_en}
+                    {t.citizen[tab.key]}
                   </span>
                 </button>
               ))}
             </div>
 
             {/* Sub-page Renders */}
-            {citizenSubPage === 'home' && <CitizenHome profile={profile} setPage={navigateCitizen} language={language} />}
-            {citizenSubPage === 'records' && <MedicalRecords records={records} language={language} />}
-            {citizenSubPage === 'timeline' && <HealthTimeline timeline={timeline} language={language} />}
-            {citizenSubPage === 'qr' && <QRHealthCard profile={profile} language={language} />}
-            {citizenSubPage === 'upload' && <UploadRecord reloadData={fetchRegistryData} setPage={navigateCitizen} language={language} />}
+            {citizenSubPage === 'home' && <CitizenHome profile={profile} setPage={navigateCitizen} language={language} t={t} reloadData={fetchRegistryData} />}
+            {citizenSubPage === 'records' && <MedicalRecords language={language} t={t} />}
+            {citizenSubPage === 'timeline' && <HealthTimeline timeline={timeline} language={language} t={t} />}
+            {citizenSubPage === 'analytics' && <PersonalAnalytics language={language} t={t} />}
+            {citizenSubPage === 'qr' && <QRHealthCard profile={profile} language={language} t={t} />}
+            {citizenSubPage === 'upload' && <UploadRecord reloadData={fetchRegistryData} setPage={navigateCitizen} language={language} t={t} />}
           </div>
         );
 
       case 'doctor':
         return (
           <DoctorConsult
-            profile={profile}
-            records={records}
-            timeline={timeline}
             reloadData={fetchRegistryData}
             language={language}
+            t={t}
           />
         );
 
       case 'govt':
-        return <GovtDashboard metrics={govtMetrics} language={language} />;
+        return <GovtDashboard metrics={govtMetrics} language={language} t={t} />;
 
       case 'map':
-        return <HealthcareMap language={language} />;
+        return <HealthcareMap language={language} t={t} />;
 
       default:
         return <div>Page Not Found</div>;
@@ -182,7 +212,7 @@ export default function App() {
           </div>
         </div>
         <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', flex: 1 }}>
-          <Login onLogin={handleLogin} language={language} />
+          <Login onLogin={handleLogin} language={language} t={t} />
         </main>
       </div>
     );
@@ -199,6 +229,7 @@ export default function App() {
         setLanguage={setLanguage}
         user={user}
         onLogout={handleLogout}
+        t={t}
       />
 
       {/* Main Panel */}

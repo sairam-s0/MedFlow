@@ -1,43 +1,16 @@
 import React from 'react';
 import { Shield, TrendingUp, TrendingDown, Package, Activity, CheckSquare } from 'lucide-react';
 
-export default function GovtDashboard({ metrics, language }) {
-  if (!metrics) return <div>Loading...</div>;
-
-  const t = {
-    title: language === 'en' ? 'National Healthcare Operations' : 'राष्ट्रीय स्वास्थ्य सेवा संचालन',
-    subtitle: language === 'en' ? 'Anonymized public health intelligence and clinical infrastructure analytics' : 'अनाम जनस्वास्थ्य डेटा और नैदानिक ​​बुनियादी ढांचा विश्लेषण',
-    nodeBadge: language === 'en' ? 'National Health Authority Node' : 'राष्ट्रीय स्वास्थ्य प्राधिकरण नोड (NHA)',
-    citizens: language === 'en' ? 'Registered Citizens' : 'पंजीकृत नागरिक',
-    citizensSub: language === 'en' ? '+12,408 registered today' : 'आज +12,408 नए पंजीकृत',
-    chronic: language === 'en' ? 'Active Chronic Patients' : 'सक्रिय पुराने रोगी',
-    chronicSub: language === 'en' ? 'Diabetes, Hypertension focus' : 'मधुमेह, उच्च रक्तचाप पर ध्यान',
-    compliance: language === 'en' ? 'Follow-up Compliance' : 'दवा अनुपालन दर',
-    complianceSub: language === 'en' ? 'Avg. prescription adherence' : 'औसत चिकित्सक पर्ची पालन',
-    pregnancy: language === 'en' ? 'Pregnancy Tracking (ANC)' : 'गर्भावस्था ट्रैकिंग (ANC)',
-    pregnancySub: language === 'en' ? 'Active antenatal care cases' : 'सक्रिय प्रसव पूर्व देखभाल मामले',
-    vaccination: language === 'en' ? 'Vaccination Coverage' : 'टीकाकरण कवरेज',
-    vaccinationSub: language === 'en' ? 'Universal immunization rate' : 'सार्वभौमिक टीकाकरण दर',
-    diseasePrev: language === 'en' ? 'Chronic Disease Prevalence' : 'गंभीर बीमारियों का क्षेत्रीय प्रसार',
-    trendingTitle: language === 'en' ? 'Epidemic Transmission Trends' : 'संक्रामक महामारी संचरण रुझान',
-    stockTitle: language === 'en' ? 'Clinical Stock Logistics' : 'आवश्यक नैदानिक ​​स्टॉक रसद',
-    rising: language === 'en' ? 'Rising' : 'बढ़ रहा है',
-    receding: language === 'en' ? 'Receding' : 'घट रहा है',
-    stable: language === 'en' ? 'Stable' : 'स्थिर आपूर्ति',
-    lowStock: language === 'en' ? 'Low Stock Alert' : 'कम स्टॉक चेतावनी',
-    highSupply: language === 'en' ? 'High Supply' : 'भरपूर आपूर्ति',
-    followUpTitle: language === 'en' ? 'Clinic Follow-up Compliance Queue' : 'स्थानीय क्लिनिक अनुवर्ती अनुपालन कतार',
-    followUpDesc: language === 'en' 
-      ? `Currently ${metrics.pendingFollowUps} patients in the district are flagged for missed medications. Local PHC workers scheduled for house checks.`
-      : `वर्तमान में जिले के ${metrics.pendingFollowUps} रोगियों को उनकी आवश्यक दवाएं छूटने के कारण चिह्नित किया गया है। आशा कार्यकर्ताओं को गृह जांच के लिए निर्देशित किया गया है।`
-  };
+export default function GovtDashboard({ metrics, language, t }) {
+  if (!metrics) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Govt Operations Portal...</div>;
 
   const getTranslatedDisease = (name) => {
     if (language === 'en') return name;
-    if (name === 'Diabetes') return 'मधुमेह (Diabetes)';
+    if (name === 'Diabetes' || name === 'Type 2 Diabetes') return 'मधुमेह (Diabetes)';
     if (name === 'Hypertension') return 'उच्च रक्तचाप (Hypertension)';
-    if (name === 'Anemia') return 'एनीमिया (Anemia)';
+    if (name === 'Iron Deficiency Anemia') return 'एनीमिया (Anemia)';
     if (name === 'Asthma') return 'अस्थमा (Asthma)';
+    if (name === 'High Cholesterol') return 'उच्च कोलेस्ट्रॉल (Cholesterol)';
     return name;
   };
 
@@ -51,9 +24,9 @@ export default function GovtDashboard({ metrics, language }) {
 
   const getTranslatedMed = (name) => {
     if (language === 'en') return name;
-    if (name.includes('Insulin')) return 'इंसुलिन इंजेक्शन (Insulin)';
-    if (name.includes('Paracetamol')) return 'पैरासिटामोल 500mg (Paracetamol)';
-    if (name.includes('Iron')) return 'आयरन फोलिक एसिड टैबलेट (Iron)';
+    if (name.includes('Metformin')) return 'मेटफॉर्मिन (Metformin)';
+    if (name.includes('Amlodipine')) return 'एम्लोडिपाइन (Amlodipine)';
+    if (name.includes('Ferrous') || name.includes('Iron')) return 'आयरन फोलिक एसिड (Iron)';
     return name;
   };
 
@@ -63,14 +36,14 @@ export default function GovtDashboard({ metrics, language }) {
       <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'var(--font-display)' }} className={language === 'hi' ? 'hindi-text' : ''}>
-            {t.title}
+            {t.govt.title}
           </h2>
           <p style={{ color: 'var(--text-secondary)' }} className={language === 'hi' ? 'hindi-text' : ''}>
-            {t.subtitle}
+            {t.govt.subtitle}
           </p>
         </div>
         <div className="badge badge-saffron" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '8px 12px' }} className={language === 'hi' ? 'badge badge-saffron hindi-text' : 'badge badge-saffron'}>
-          <Shield size={14} /> {t.nodeBadge}
+          <Shield size={14} /> {t.govt.nodeBadge}
         </div>
       </div>
 
@@ -78,43 +51,53 @@ export default function GovtDashboard({ metrics, language }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         
         <div className="dashboard-card animate-cascade-1" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.citizens}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.citizens}</span>
           <h3 style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--primary)', marginTop: '4px' }}>
             {metrics.registeredCitizens.toLocaleString()}
           </h3>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.citizensSub}</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>
+            {language === 'en' ? 'Active database nodes' : 'सक्रिय डेटाबेस नोड्स'}
+          </p>
         </div>
 
         <div className="dashboard-card animate-cascade-2" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.chronic}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.chronic}</span>
           <h3 style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--gov-saffron)', marginTop: '4px' }}>
             {metrics.activeChronicPatients.toLocaleString()}
           </h3>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.chronicSub}</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>
+            {language === 'en' ? 'Clinically monitored cases' : 'चिकित्सकीय रूप से निगरानी मामले'}
+          </p>
         </div>
 
         <div className="dashboard-card animate-cascade-3" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.compliance}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.compliance}</span>
           <h3 style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--gov-green)', marginTop: '4px' }}>
             {metrics.followUpCompliance}%
           </h3>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.complianceSub}</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>
+            {language === 'en' ? 'National adherence avg' : 'औसत राष्ट्रीय अनुपालन'}
+          </p>
         </div>
 
         <div className="dashboard-card animate-cascade-4" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.pregnancy}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.pregnancy}</span>
           <h3 style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--primary)', marginTop: '4px' }}>
             {metrics.pregnancyTracking.toLocaleString()}
           </h3>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.pregnancySub}</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>
+            {language === 'en' ? 'Active antenatal care' : 'सक्रिय प्रसव पूर्व देखभाल'}
+          </p>
         </div>
 
         <div className="dashboard-card animate-cascade-5" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.vaccination}</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.vaccination}</span>
           <h3 style={{ fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--gov-green)', marginTop: '4px' }}>
             {metrics.vaccinationCoverage}%
           </h3>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.vaccinationSub}</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }} className={language === 'hi' ? 'hindi-text' : ''}>
+            {language === 'en' ? 'Immunized database citizens' : 'टीकाकृत डेटाबेस नागरिक'}
+          </p>
         </div>
 
       </div>
@@ -125,7 +108,7 @@ export default function GovtDashboard({ metrics, language }) {
         <div className="dashboard-card animate-cascade-3">
           <h4 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }} className={language === 'hi' ? 'hindi-text' : ''}>
             <Activity size={20} color="var(--primary)" />
-            {t.diseasePrev}
+            {t.govt.diseasePrev}
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {metrics.commonDiseases.map((dis, idx) => (
@@ -135,10 +118,11 @@ export default function GovtDashboard({ metrics, language }) {
                   <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{dis.count.toLocaleString()} {language === 'en' ? 'cases' : 'मामले'}</span>
                 </div>
                 <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${dis.pct}%`, backgroundColor: idx % 2 === 0 ? 'var(--primary)' : 'var(--gov-saffron)', borderRadius: '4px' }} />
+                  <div style={{ height: '100%', width: `${dis.pct || 5}%`, backgroundColor: idx % 2 === 0 ? 'var(--primary)' : 'var(--gov-saffron)', borderRadius: '4px' }} />
                 </div>
               </div>
             ))}
+            {metrics.commonDiseases.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No clinical diseases logs in database.</span>}
           </div>
         </div>
 
@@ -149,7 +133,7 @@ export default function GovtDashboard({ metrics, language }) {
           <div className="dashboard-card animate-cascade-4" style={{ flex: 1 }}>
             <h4 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }} className={language === 'hi' ? 'hindi-text' : ''}>
               <TrendingUp size={20} color="var(--danger)" />
-              {t.trendingTitle}
+              {t.govt.trendingTitle}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {metrics.trendingDiseases.map((trend, idx) => (
@@ -160,9 +144,9 @@ export default function GovtDashboard({ metrics, language }) {
                       {trend.trend === 'up' ? '+' : ''}{trend.pct}%
                     </span>
                     {trend.trend === 'up' ? (
-                      <span className="badge badge-danger" style={{ padding: '2px 6px', fontSize: '0.65rem' }} className={language === 'hi' ? 'badge badge-danger hindi-text' : 'badge badge-danger'}><TrendingUp size={10} /> {t.rising}</span>
+                      <span className="badge badge-danger" style={{ padding: '2px 6px', fontSize: '0.65rem' }} className={language === 'hi' ? 'badge badge-danger hindi-text' : 'badge badge-danger'}><TrendingUp size={10} /> {t.govt.rising}</span>
                     ) : (
-                      <span className="badge badge-green" style={{ padding: '2px 6px', fontSize: '0.65rem' }} className={language === 'hi' ? 'badge badge-green hindi-text' : 'badge badge-green'}><TrendingDown size={10} /> {t.receding}</span>
+                      <span className="badge badge-green" style={{ padding: '2px 6px', fontSize: '0.65rem' }} className={language === 'hi' ? 'badge badge-green hindi-text' : 'badge badge-green'}><TrendingDown size={10} /> {t.govt.receding}</span>
                     )}
                   </div>
                 </div>
@@ -174,7 +158,7 @@ export default function GovtDashboard({ metrics, language }) {
           <div className="dashboard-card animate-cascade-5" style={{ flex: 1 }}>
             <h4 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }} className={language === 'hi' ? 'hindi-text' : ''}>
               <Package size={20} color="var(--warning)" />
-              {t.stockTitle}
+              {t.govt.stockTitle}
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {metrics.medicineDemand.map((med, idx) => (
@@ -185,9 +169,9 @@ export default function GovtDashboard({ metrics, language }) {
                       {language === 'en' ? 'Stock Level:' : 'भंडार स्तर:'} <strong>{med.stock}%</strong>
                     </div>
                     <span className={`badge ${
-                      med.status.includes('Low') ? 'badge-danger' : 'badge-green'
+                      med.stock < 40 ? 'badge-danger' : 'badge-green'
                     }`} style={{ fontSize: '0.65rem', padding: '4px 8px' }} className={language === 'hi' ? 'badge hindi-text' : 'badge'}>
-                      {med.status.includes('Low') ? t.lowStock : med.status.includes('Stable') ? t.stable : t.highSupply}
+                      {med.stock < 40 ? t.govt.lowStock : t.govt.highSupply}
                     </span>
                   </div>
                 </div>
@@ -204,9 +188,9 @@ export default function GovtDashboard({ metrics, language }) {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <CheckSquare size={20} color="var(--primary)" />
           <div>
-            <h5 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.followUpTitle}</h5>
+            <h5 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--primary)' }} className={language === 'hi' ? 'hindi-text' : ''}>{t.govt.followUpTitle}</h5>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }} className={language === 'hi' ? 'hindi-text' : ''}>
-              {t.followUpDesc}
+              {t.govt.followUpDesc}
             </p>
           </div>
         </div>
