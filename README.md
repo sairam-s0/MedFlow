@@ -395,7 +395,12 @@ The application uses SQLite with SQLAlchemy ORM. Key models:
 | Deployment| Vercel (Serverless Functions + Static Hosting)        |
 
 ---
-
+## Testing
+```
+username:test123
+password:test@123
+```
+---
 ## Contributing
 
 1. Fork the repository
